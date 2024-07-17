@@ -8,7 +8,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
-from urllib.parse import urlparse
 import tempfile
 
 def clean_url(url):
@@ -59,11 +58,14 @@ def clean_link(domain, link):
         return None
     return cleaned_link
 
-def write_to_file(links):
+def write_to_file(links, save_as_archive):
     with open('Scraped_output.txt', 'w') as file:
         for link in links:
             if link is not None and "web.archive.org" not in link:
-                file.write(link + '\n')
+                if save_as_archive:
+                    file.write(f"https://web.archive.org/web/*/{link}\n")
+                else:
+                    file.write(link + '\n')
 
 ctypes.windll.kernel32.SetConsoleTitleW(f"Web Links Scraper - by Sla0ui")
 
@@ -96,6 +98,10 @@ if select == 1:
     print(Fore.LIGHTGREEN_EX + "Enter the number of pages to scrape (max->200)")
     num_pages = int(input("\n> "))
 
+    print(Fore.LIGHTGREEN_EX + "Save links as:\n[1] Archived version (Wayback Machine)\n[2] Original URL")
+    save_option = int(input("\n> "))
+    save_as_archive = save_option == 1
+
     log_file_path = "webdriver.log"
     options = webdriver.ChromeOptions()
     options.add_argument('--headless')
@@ -118,14 +124,13 @@ if select == 1:
     page_links = extract_links(driver, domain)
     all_links.extend(page_links)
 
-    print("\n" + Fore.LIGHTGREEN_EX + "[+] " + Fore.MAGENTA + ">>" + Fore.LIGHTGREEN_EX + " Connexion Established !! " + "\n")
+    print("\n" + Fore.LIGHTGREEN_EX + "[+] " + Fore.MAGENTA + ">>" + Fore.LIGHTGREEN_EX + " Connection Established !! " + "\n")
 
     print(Fore.LIGHTCYAN_EX + "\nSorting order ?\n\n[1] Oldest to Newest\n[2] Newest to Oldest\n[3] Default (by URL)\n")
     sort_option = input("\n> ")
     while sort_option not in ['1', '2', '3']:
         print(Fore.RED + "Incorrect value.")
         sort_option = input("\n> ")
-
 
     if sort_option == '1':
         date_sort_button = driver.find_element(By.XPATH, '//*[@id="resultsUrl"]/thead/tr/th[3]')
@@ -148,7 +153,6 @@ if select == 1:
     current_page = 0
     progress_bar = Bar(Fore.LIGHTCYAN_EX + 'Scraping Progress', max=num_pages)
 
-
     while has_next_page(driver) and current_page < num_pages:
         next_button = driver.find_element(By.XPATH, '//*[@id="resultsUrl_next"]/a')
         next_button.click()
@@ -166,7 +170,7 @@ if select == 1:
     temp_stderr.close()
 
     filtered_links = filter_links(all_links)
-    write_to_file(filtered_links)
+    write_to_file(filtered_links, save_as_archive)
     print(Fore.LIGHTMAGENTA_EX + "Saved to file\n")
     print(Fore.LIGHTCYAN_EX + "Process ended. Press Enter to exit.")
     input()
